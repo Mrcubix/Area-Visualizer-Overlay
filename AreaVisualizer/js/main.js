@@ -25,16 +25,16 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     socket.onopen = function (event) {
         console.log("Connected, send request now...");
-        socket.send('{"pipe": "AreaVisualizer"}');
+        socket.send('{"id": "AreaVisualizer"}');
         console.log("Initial Query sent");
     };
     socket.onmessage = function (message) {
-        var json = JSON.parse(message.data);
-        if (json["FullArea"] != undefined) {
-            area = json;
-            SetArea(json);
+        json = JSON.parse(message.data);
+        if (json.Area != undefined) {
+            area = json["Area"];
+            SetArea(area);
         } else {
-            SetPos(json);
+            SetPos(json["Position"]);
         }
     }
 })
@@ -46,17 +46,17 @@ function SetPos(pos) {
 }
 function SetArea(area) {
     if (area != undefined) {
-        tabletAreaContainer.setAttribute("width", String(area.FullArea.size.X)+"mm");
-        tabletAreaContainer.setAttribute("height", String(area.FullArea.size.Y)+"mm");
+        tabletAreaContainer.setAttribute("width", String(area.fullArea.size.X)+"mm");
+        tabletAreaContainer.setAttribute("height", String(area.fullArea.size.Y)+"mm");
 
-        userDefinedAreaContainer.setAttribute("height", String(area.FullArea.size.Y)+"mm");
-        userDefinedAreaContainer.setAttribute("height", String(area.FullArea.size.Y)+"mm");
+        userDefinedAreaContainer.setAttribute("height", String(area.fullArea.size.Y)+"mm");
+        userDefinedAreaContainer.setAttribute("height", String(area.fullArea.size.Y)+"mm");
 
-        penPositionContainer.setAttribute("width", String(area.FullArea.size.X)+"mm");
-        penPositionContainer.setAttribute("height", String(area.FullArea.size.Y)+"mm");
+        penPositionContainer.setAttribute("width", String(area.fullArea.size.X)+"mm");
+        penPositionContainer.setAttribute("height", String(area.fullArea.size.Y)+"mm");
 
-        fullArea.setAttribute("width", String(area.FullArea.size.X)+"mm");
-        fullArea.setAttribute("height", String(area.FullArea.size.Y)+"mm");
+        fullArea.setAttribute("width", String(area.fullArea.size.X)+"mm");
+        fullArea.setAttribute("height", String(area.fullArea.size.Y)+"mm");
         fullArea.setAttribute("x", "0mm");
         fullArea.setAttribute("y", "0mm");
         

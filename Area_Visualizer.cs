@@ -12,17 +12,17 @@ namespace Area_Visualizer
     [PluginName("Area Visualizer Overlay")]
     public class Area_Visualizer : IFilter
     {
-        private readonly ManualResetEvent resetEvent = new ManualResetEvent(false);
-        Server server;
+        public event EventHandler<Vector2> PositionChanged;
+        Client client;
         Area area;
-        private bool serverIsRunning = false;
         private bool firstUse = false;
         private bool hasJustSaved = true;
-        private Vector2 currentPosition = new Vector2();
         private string overlayDir;
         private string pluginOverlayDir;
         public Area_Visualizer()
         {
+            _areaUpdateInterval = 5000;
+            //
             overlayDir = Path.Combine(Directory.GetCurrentDirectory(), "Overlays");
             if (!Directory.Exists(overlayDir))
             {
@@ -36,14 +36,27 @@ namespace Area_Visualizer
                 firstUse = true;
             }
             
-            if (!serverIsRunning) 
+            client = new Client("API");
+            Log.Debug("Area Visualizer", "Starting Client...");
+            _ = Task.Run(client.StartAsync);
+
+            area = new Area();
+            _ = Task.Run(CheckAreaChangesAsync);
+
+            this.PositionChanged += (_, input) => Task.Run(async () =>
             {
-                serverIsRunning = true;
-                server = new Server("AreaVisualizer", this);
-                area = new Area();
-                Log.Debug("Area Visualizer", "Starting server");
-                _ = Task.Run(server.StartAsync);
-            }
+                if (client.client.IsConnected)
+                {
+                    await client.rpc.NotifyAsync("SendDataAsync", "AreaVisualizer", "Position", input);
+                }
+            });
+            area.AreaChanged += (_, area) => Task.Run(async () =>
+            {
+                if (client.client.IsConnected)
+                {
+                    await client.rpc.NotifyAsync("SendDataAsync", "AreaVisualizer", "Area", area);
+                }
+            });
         }
         public Vector2 Filter(Vector2 input)
         {
@@ -52,33 +65,23 @@ namespace Area_Visualizer
                 firstUse = false;
                 new Thread(new ThreadStart(CopyFiles)).Start();
             }
-            currentPosition = input;
-            resetEvent.Set();
-            resetEvent.Reset();
+            PositionChanged?.Invoke(this, input);
             return input;
         }
-        public Task<string> GetMethodsAsync()
+        public async Task CheckAreaChangesAsync()
         {
-            string methods = "[\"GetPositionAsync\", \"GetAreaAsync\"]";
-            return Task.FromResult(methods);
-        }
-        public async Task<Vector2> GetPositionAsync()
-        {
-            await Task.Run(() => resetEvent.WaitOne());
-            return currentPosition;
-        }
-        public async Task<Area> GetAreaAsync()
-        {
-            if (hasJustSaved)
+            while(true)
             {
-                hasJustSaved = false;
+                if (hasJustSaved)
+                {
+                    hasJustSaved = false;
+                }
+                else
+                {
+                    await Task.Delay(_areaUpdateInterval);
+                }
+                area.UpdateArea();
             }
-            else
-            {
-                await Task.Delay(_areaUpdateInterval);
-            }
-            area.SetAreaIfChanged();
-            return area;
         }
         public FilterStage FilterStage => FilterStage.PreTranspose;
         // http://msdn.microsoft.com/en-us/library/cc148994.aspx
