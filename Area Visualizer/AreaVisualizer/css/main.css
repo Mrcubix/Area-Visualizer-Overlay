@@ -5,7 +5,8 @@
 }
 
 .FullAreaContainer {
-    background-image: url("../img/WYSI.gif");
+    /* You can use images as Area background here */
+    background-image: url("");
     background-size: cover
 }
 
